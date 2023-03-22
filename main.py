@@ -1,7 +1,7 @@
 '''
 QUERY:
     1. '
-            for $x in json-lines("collection-answers.json").answers[]
+            FOR $x in json-lines("collection-answers.json").answers[]
             return
                 {
                     "answer_id" : $x.answer_id,
@@ -33,19 +33,48 @@ Questions to ask:
 '''
 
 
+
+
 from MProjectParser import parser
 import json
 import os
 from pymongo import MongoClient
 import pprint
 from itertools import product
-class Main(object):
-    def __init__(self, prompt) -> None:
-        self.input_query = self.read_input(prompt)
-        self.parsed_query = parser.parse(self.input_query)
-        self.collection_name = ''
+class BColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
-    # Helper functions
+
+class Main(object):
+    for_clauses = []
+    return_clause = ''
+    where_clauses = []
+    input_query = ''
+    parsed_query = []
+
+    def __init__(self, prompt) -> None:
+        # read the query from input
+        self.input_query = self.read_input(prompt)
+        try:
+            # parse the query using parser created
+            parsed_query = parser.parse(self.input_query)
+            # segregate the for clauses, where clauses, and the return clause
+            self.for_clauses = parsed_query[0]
+            self.return_clause = parsed_query[-1]
+            if len(parsed_query) > 2:
+                self.where_clauses = parsed_query[1]
+        except:
+            print('There is syntax error. Please resolve it and try again.\n')
+
+    ######################################### HELPER FUNCTIONS #########################################
     def readFile(self, filename):
         with open(filename, 'r') as f:
             file_content = json.load(f)
@@ -79,13 +108,16 @@ class Main(object):
                 result += data + ' '
         return result[:-1]
 
-    # file existance check
+    ######################################### HELPER FUNCTIONS #########################################
+
+    ######################################### SEMANTIC ERRORS CHECK #########################################
+    # check if file exists
+
     def check_for_file(self):
         res = dict({"is_valid": True, "message": "File(s) found."})
-        expressions = self.parsed_query[0][1]
+        expressions = self.for_clauses[1]
         for expression in expressions:
             filename = expression[1][1]
-            self.collection_name = filename.split('.')[0]
             # check if the file exists
             if not os.path.isfile(filename):
                 res['is_valid'] = False
@@ -93,11 +125,11 @@ class Main(object):
                 break
         return res
 
-    # check for valid variables
+    # check if variables are declared earlier
     def check_for_variables(self):
         res = dict({"is_valid": True, "message": "Variables are valid"})
-        expressions = self.parsed_query[0][1]
-        return_expression = self.parsed_query[1][1]
+        expressions = self.for_clauses[1]
+        return_expression = self.return_clause[1]
         declared_variables = []
         # fetch the declared variables from the first part of the parsed query
         for expression in expressions:
@@ -107,7 +139,7 @@ class Main(object):
         if return_expression[0] != '{':
             if return_expression[0] not in declared_variables:
                 res['is_valid'] = False
-                res['message'] = f"Variable '{return_expression[0]}' is not declared. Please check your query."
+                res['message'] = f"Variable '{return_expression[0]}' is not declared."
         # if the return expression is a dictionary
         elif return_expression[0] == '{':
             dict_values = return_expression[1]
@@ -123,7 +155,7 @@ class Main(object):
     '''
     def check_for_file_contents(self):
         res = dict({"is_valid": True, "message": "File content(s) are valid."})
-        expressions = self.parsed_query[0][1]
+        expressions = self.for_clauses[1]
         # iterate over all the expressions
         for expression in expressions:
             filename = expression[1][1]
@@ -160,20 +192,28 @@ class Main(object):
 
     # wrapper function that calls all the checks listed above
     def check_semantic_errors(self) -> dict:
-        print('Checking for semantic errors...')
-        print('--------------------------------')
-        print(f'File validity: {self.check_for_file()["message"]}')
+        validities = {
+            # 'file_check': self.check_for_file(),
+            'variables_check': self.check_for_variables()
+        }
+        print(f'{BColors.UNDERLINE}\nChecking for semantic errors{BColors.ENDC}')
+        # print(f'File validity: {validities["file_check"]["message"]}')
+        # print(
+        #     f'File content(s) validity: {self.check_for_file_contents()["message"]}')
         print(
-            f'File content(s) validity: {self.check_for_file_contents()["message"]}')
-        print(f'Variables validity: {self.check_for_variables()["message"]}')
+            f'Variables validity: {validities["variables_check"]["message"]}')
 
-    # generate mongodb query
+        return (validities['variables_check']['is_valid'])
+        # and validities['file_check']['is_valid'] )
+    ######################################### SEMANTIC ERRORS CHECK #########################################
+
+    ######################################### GENERATE MONGODB QUERY #########################################
     def generate_mongoDB_query(self):
         # connection to mongodb database
         client = MongoClient()
         # how will we understand which database to use??
         db = client.jsoniq
-        expressions = self.parsed_query[0][1]
+        expressions = self.for_clauses[1]
         result = []
         updated_query_response = []
         for expression in expressions:
@@ -201,6 +241,9 @@ class Main(object):
         if len(updated_query_response) > 1:
             updated_query_response = self.cross_product(updated_query_response)
 
+        if len(self.where_clauses) > 1:
+            updated_query_response = self.handle_where_clause(
+                updated_query_response)
 
         # generating the answer
         if type(updated_query_response).__name__ == 'list':
@@ -214,11 +257,18 @@ class Main(object):
         #         result.append(_)
 
         return result
+    ######################################### GENERATE MONGODB QUERY #########################################
+
+    ######################################### HANDLE QUERY CLAUSES #########################################
+    def handle_for_clauses():
+        updated_query_response = []
+
+        return updated_query_response
 
     # form the return data
     def generate_return_data(self, query_data):
         result = []
-        return_clauses = self.parsed_query[1][1]
+        return_clauses = self.return_clause[1]
         # returning a dictionary
         if return_clauses[0] == '{':
             if type(query_data).__name__ == 'list':
@@ -254,7 +304,8 @@ class Main(object):
                     for return_clause in return_clauses[1]:
                         if type(return_clause).__name__ == 'list':
                             if not return_data:
-                                return_data = qd[return_clause[0]][return_clause[1]]
+                                return_data = qd[return_clause[0]
+                                                 ][return_clause[1]]
                             else:
                                 return_data = return_data[rc]
                         else:
@@ -281,9 +332,22 @@ class Main(object):
                 result.append(return_data)
         return result
 
+    ######################################### HANDLE QUERY CLAUSES #########################################
 
+
+######################################### ENTRY POINT #########################################
+print(f'''{BColors.OKBLUE}
+-----------------------------------------------------------------------------------------------------------------------
+Enter the input query in JSONiq starting from the next line. To mark the end of the input query, add ';' at the end.
+To run the query, press enter.
+-----------------------------------------------------------------------------------------------------------------------{BColors.ENDC}
+''')
 mainObj = Main("Enter an input query")
 mainObj.check_for_file()
-# mainObj.check_semantic_errors()
-print('Fetched Data...')
-pprint.pprint(mainObj.generate_mongoDB_query())
+if mainObj.check_semantic_errors():
+    print(f'{BColors.UNDERLINE}\nResults for above query{BColors.ENDC}')
+    pprint.pprint(mainObj.generate_mongoDB_query())
+    print(f'{BColors.OKGREEN}\nFetched data successfully...\n\n{BColors.ENDC}')
+else:
+    print(
+        f'{BColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{BColors.ENDC}')

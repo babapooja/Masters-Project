@@ -1,9 +1,4 @@
 
-# -----------------------------------------------------------------------------
-#
-#
-#
-# -----------------------------------------------------------------------------
 
 import ply.lex as lex
 reserved = {
@@ -11,11 +6,18 @@ reserved = {
     'in': 'IN',
     'where': 'WHERE',
     'return': 'RETURN',
+    'eq': 'EQUAL',
+    'ne': 'NOTEQUAL',
+    'gt': 'GREATERTHAN',
+    'gte': 'GREATERTHANEQUAL',
+    'lt': 'LESSTHAN',
+    'lte': 'LESSTHANEQUAL',
 }
 
 tokens = [
     'NAME', 'DOT', 'LBRACKET', 'RBRACKET', 'LPAREN', 'RPAREN', 'STRING',
-    'NUMBER', 'COMMA', 'JSONLINES', 'VARIABLE',  'FILENAME', "INVERTEDCOMMA", "LCBRACKET", "RCBRACKET", "COLON"
+    'NUMBER', 'COMMA', 'JSONLINES', 'VARIABLE',  'FILENAME', "INVERTEDCOMMA",
+    "LCBRACKET", "RCBRACKET", "COLON"
 ] + list(reserved.values())
 
 
@@ -67,6 +69,39 @@ def t_RETURN(t):
     t.value = 'return'
     return t
 
+def t_EQUAL(t):
+    r'[eE][qQ]'
+    t.value = 'eq'
+    return t
+
+def t_NOTEQUAL(t):
+    r'[nN][eE]'
+    t.value = 'ne'
+    return t
+
+def t_GREATERTHANEQUAL(t):
+    r'[gG][tT][eE]'
+    t.value = 'gte'
+    return t
+
+def t_GREATERTHAN(t):
+    r'[gG][tT]'
+    t.value = 'gt'
+    return t
+
+
+def t_LESSTHANEQUAL(t):
+    r'[lL][tT][eE]'
+    t.value = 'lte'
+    return t
+
+
+def t_LESSTHAN(t):
+    r'[lL][tT]'
+    t.value = 'lt'
+    return t
+
+
 
 def t_NUMBER(t):
     r'\d+'
@@ -94,6 +129,15 @@ def t_error(t):
 # Build the lexer
 lexer = lex.lex()
 
+inputdata = '''
+FOR $x in json-lines("collection-answers.json").answers[]
+where $x.abc lte 10
+            return
+                {
+                    "answer_id" : $x.answer_id,
+                    "q_id" : $x.question_id
+                }
+'''
 # lexer.input(inputdata)
 # while True:
 #     tok = lexer.token()
