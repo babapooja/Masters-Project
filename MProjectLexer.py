@@ -12,6 +12,11 @@ reserved = {
     'gte': 'GREATERTHANEQUAL',
     'lt': 'LESSTHAN',
     'lte': 'LESSTHANEQUAL',
+    'contains': 'CONTAINS',
+    'some': 'SOME',
+    'every': 'EVERY',
+    'satisfies': 'SATISFIES'
+
 }
 
 tokens = [
@@ -24,7 +29,7 @@ tokens = [
 # Tokens
 
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'  # eg: john
-t_STRING = r'\"[a-zA-Z_][a-zA-Z0-9_]*"'  # eg: 'john' or "john"
+t_STRING = r'\"[a-zA-Z_][a-zA-Z0-9_]*"'  # eg: "john"
 t_FILENAME = r"[a-zA-Z_][a-zA-Z0-9-_]*.json"  # eg: 'abc.json'
 t_VARIABLE = r'\$[a-zA-Z_][a-zA-Z0-9_]*'
 t_DOT = r'\.'
@@ -64,25 +69,47 @@ def t_WHERE(t):
     return t
 
 
+def t_SOME(t):
+    r'[sS][oO][mM][eE]'
+    t.value = 'some'
+    return t
+
+
+def t_EVERY(t):
+    r'[eE][vV][eE][rR][yY]'
+    t.value = 'every'
+    return t
+
+
+def t_SATISFIES(t):
+    r'[sS][aA][tT][iI][sS][fF][iI][eE][sS]'
+    t.value = 'satisfies'
+    return t
+
+
 def t_RETURN(t):
     r'[rR][eE][tT][uU][rR][nN]'
     t.value = 'return'
     return t
+
 
 def t_EQUAL(t):
     r'[eE][qQ]'
     t.value = 'eq'
     return t
 
+
 def t_NOTEQUAL(t):
     r'[nN][eE]'
     t.value = 'ne'
     return t
 
+
 def t_GREATERTHANEQUAL(t):
     r'[gG][tT][eE]'
     t.value = 'gte'
     return t
+
 
 def t_GREATERTHAN(t):
     r'[gG][tT]'
@@ -101,6 +128,11 @@ def t_LESSTHAN(t):
     t.value = 'lt'
     return t
 
+
+def t_CONTAINS(t):
+    r'[cC][oO][nN][tT][aA][iI][nN][sS]'
+    t.value = 'contains'
+    return t
 
 
 def t_NUMBER(t):
@@ -131,7 +163,7 @@ lexer = lex.lex()
 
 inputdata = '''
 FOR $x in json-lines("collection-answers.json").answers[]
-where $x.abc lte 10
+where contains($x.abc, "ABC")
             return
                 {
                     "answer_id" : $x.answer_id,

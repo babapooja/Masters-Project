@@ -24,12 +24,35 @@ QUERY:
             };
 
         '
-'''
+    4. '
+            for $question in json-lines("collection-faq.json").faqs[],
+                $answer in json-lines("collection-answers.json").answers[]
+            where $question.question_id eq $answer.question_id
+            return
+            {
+                "question":$question.title,
+                "answer_score":$answer.score
+            };
 
-'''
-Questions to ask:
-1. How to deteremine which database to choose in mongodb?
-2. How to determine if the filename given inside json-lines exists or not? Or should it be there when user runs the program?
+        '
+    5. '
+        for $question in json-lines("collection-faq.json").faqs[],
+            $answer in json-lines("collection-answers.json").answers[]
+        where contains($question.title, "MySQL")
+        return
+        {
+            "question":$question.title,
+            "answer_score":$answer.score
+        };
+
+    '
+    6. '
+        for $question in json-lines("collection-faq.json").faqs[]
+        where some $tag in $question.tags[] 
+        satisfies $tag eq "php"
+        return $tag;
+
+    '
 '''
 
 
@@ -39,6 +62,7 @@ import os
 from pymongo import MongoClient
 import pprint
 from itertools import product
+
 
 class BColors:
     HEADER = '\033[95m'
@@ -61,16 +85,16 @@ class Main(object):
     def __init__(self, prompt) -> None:
         # read the query from input
         self.input_query = self.read_input(prompt)
-        try:
+        # try:
             # parse the query using parser created
-            parsed_query = parser.parse(self.input_query)
-            # segregate the for clauses, where clauses, and the return clause
-            self.for_clauses = parsed_query[0]
-            self.return_clause = parsed_query[-1]
-            if len(parsed_query) > 2:
-                self.where_clauses = parsed_query[1]
-        except:
-            print('There is syntax error. Please resolve it and try again.\n')
+        parsed_query = parser.parse(self.input_query)
+        # segregate the for clauses, where clauses, and the return clause
+        self.for_clauses = parsed_query[0]
+        self.return_clause = parsed_query[-1]
+        if len(parsed_query) > 2:
+            self.where_clauses = parsed_query[1]
+        # except:
+        #     print('There is syntax error. Please resolve it and try again.\n')
 
     ######################################### HELPER FUNCTIONS #########################################
     def readFile(self, filename):
@@ -213,7 +237,7 @@ class Main(object):
         result = []
         # work on the FOR clause
         updated_query_response = self.handle_for_clauses(db)
-        
+
         if len(updated_query_response) > 1:
             updated_query_response = self.cross_product(updated_query_response)
 
@@ -330,11 +354,25 @@ class Main(object):
         return result
 
     def handle_where_clause(self, query_data):
-        return
+        where_clauses = self.where_clauses[1]
+        print(where_clauses)
+        if len(where_clauses) == 2 and where_clauses[0] == 'wexpr':
+            lhs = where_clauses[1][0]
+            rhs = where_clauses[1][2]
+            condition = where_clauses[1][1]
+        if len(where_clauses) == 2 and where_clauses[0] == 'contains':
+            lhs = where_clauses[1][0]
+            rhs = where_clauses[1][2]
+            condition = where_clauses[1][1]
+        if len(where_clauses) == 3:
+            print(where_clauses)
+            # quantifier = where_clauses[1][0]
+            # rhs = where_clauses[1][2]
+            # condition = where_clauses[1][1]
+        
+        return 
 
     ######################################### HANDLE QUERY CLAUSES - FOR, WHERE, RETURN #########################################
-
-
 
 
 ######################################### ENTRY POINT #########################################
@@ -347,10 +385,11 @@ if __name__ == '__main__':
     ''')
     mainObj = Main("Enter an input query")
     mainObj.check_for_file()
-    if mainObj.check_semantic_errors():
-        print(f'{BColors.UNDERLINE}\nResults for above query{BColors.ENDC}')
-        pprint.pprint(mainObj.generate_mongoDB_query())
-        print(f'{BColors.OKGREEN}\nFetched data successfully...\n\n{BColors.ENDC}')
-    else:
-        print(
-            f'{BColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{BColors.ENDC}')
+    pprint.pprint(mainObj.generate_mongoDB_query())
+    # if mainObj.check_semantic_errors():
+    #     print(f'{BColors.UNDERLINE}\nResults for above query{BColors.ENDC}')
+    #     pprint.pprint(mainObj.generate_mongoDB_query())
+    #     print(f'{BColors.OKGREEN}\nFetched data successfully...\n\n{BColors.ENDC}')
+    # else:
+    #     print(
+    #         f'{BColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{BColors.ENDC}')
