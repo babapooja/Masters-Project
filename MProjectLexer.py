@@ -9,14 +9,11 @@ reserved = {
     'eq': 'EQUAL',
     'ne': 'NOTEQUAL',
     'gt': 'GREATERTHAN',
-    'gte': 'GREATERTHANEQUAL',
+    'gte': 'GREATEREQUAL',
     'lt': 'LESSTHAN',
-    'lte': 'LESSTHANEQUAL',
-    'contains': 'CONTAINS',
-    'some': 'SOME',
-    'every': 'EVERY',
-    'satisfies': 'SATISFIES'
-
+    'lte': 'LESSEQUAL',
+    'and': 'AND',
+    'contains': 'CONTAINS'
 }
 
 tokens = [
@@ -68,22 +65,9 @@ def t_WHERE(t):
     t.value = 'where'
     return t
 
-
-def t_SOME(t):
-    r'[sS][oO][mM][eE]'
-    t.value = 'some'
-    return t
-
-
-def t_EVERY(t):
-    r'[eE][vV][eE][rR][yY]'
-    t.value = 'every'
-    return t
-
-
-def t_SATISFIES(t):
-    r'[sS][aA][tT][iI][sS][fF][iI][eE][sS]'
-    t.value = 'satisfies'
+def t_AND(t):
+    r'[aA][nN][dD]'
+    t.value = 'and'
     return t
 
 
@@ -105,9 +89,9 @@ def t_NOTEQUAL(t):
     return t
 
 
-def t_GREATERTHANEQUAL(t):
-    r'[gG][tT][eE]'
-    t.value = 'gte'
+def t_GREATEREQUAL(t):
+    r'[gG][eE]'
+    t.value = 'ge'
     return t
 
 
@@ -117,9 +101,9 @@ def t_GREATERTHAN(t):
     return t
 
 
-def t_LESSTHANEQUAL(t):
-    r'[lL][tT][eE]'
-    t.value = 'lte'
+def t_LESSEQUAL(t):
+    r'[lL][eE]'
+    t.value = 'le'
     return t
 
 

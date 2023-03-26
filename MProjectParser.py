@@ -12,18 +12,21 @@ Grammar:
 
     forclause: FOR exprs
 
-    whereclause: WHERE  wexpr
-                | WHERE quantifier VARIABLE DOT pathexpr IN VARIABLE dot pathexpr SATISFIES wexpr
-                | WHERE quantifier VARIABLE DOT pathexpr IN expr SATISFIES wexpr
+    whereclause: WHERE  wexprs
 
-    quantifier: SOME | EVERY
+    wexprs: wexpr | wexprs AND wexpr
 
-    wexpr: VARIABLE DOT pathexpr condition VARIABLE DOT pathexpr 
+    wexpr: VARIABLE DOT pathexpr condition VARIABLE DOT pathexpr
+            | VARIABLE condition VARIABLE DOT pathexpr
+            | VARIABLE condition VARIABLE
             | VARIABLE DOT pathexpr condition STRING 
+            | VARIABLE condition STRING 
             | VARIABLE DOT pathexpr condition NUMBER
+            | VARIABLE condition NUMBER
             | CONTAINS LPAREN VARIABLE DOT pathexpr COMMA STRING RPAREN
+            | CONTAINS LPAREN VARIABLE COMMA STRING RPAREN
 
-    condition: EQUAL | NOTEQUAL | GREATERTHANEQUAL | GREATERTHAN | LESSTHANEQUAL | LESSTHAN 
+    condition: EQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSEQUAL | LESSTHAN 
 
     exprs: exprs COMMA expr | expr
 
@@ -42,15 +45,6 @@ Grammar:
     jsoncontents : jsoncontents COMMA jsoncontent | jsoncontent
 
     jsoncontent : STRING COLON rexpr
-
-Examples:
-1. for  $question in json-lines("collection-faq.json").faqs[0],
-        $answer in json-lines("collection-answers.json").answers[1] 
-    return $x.owner
-
-2. for $x in json-lines("collection_name.json").answers[0] return $x.owner.display_name
-
-3. for $x in json-lines("collection_name.json").answers[0].abc return {"name":$x.owner[].display_name, "address":$x.owner[].display_name}
 
 '''
 
@@ -82,54 +76,16 @@ def p_forclause(p):
 
 ########################################### wherelcause
 def p_whereclause_1(p):
-    'whereclause : WHERE wexpr'
+    'whereclause : WHERE wexprs'
     p[0] = ['where', p[2]]
 
-def p_whereclause_2(p):
-    'whereclause : WHERE quantifier VARIABLE DOT pathexpr IN VARIABLE DOT pathexpr SATISFIES wexpr'
-    p[0] = ['where', [
-                p[2], [[p[3], p[5]]], 
-                [p[7], p[9]], 
-                p[11]
-            ]
-        ]
+def p_wexprs_1(p):
+    'wexprs : wexprs AND wexpr'
+    p[0] = p[1] + [p[3]]
 
-def p_whereclause_3(p):
-    'whereclause : WHERE quantifier VARIABLE IN VARIABLE DOT pathexpr SATISFIES wexpr'
-    p[0] = ['where', [
-                p[2], p[3], 
-                [p[5], p[7]], 
-                p[9]
-            ]
-        ]
-
-def p_whereclause_4(p):
-    'whereclause : WHERE quantifier VARIABLE DOT pathexpr IN JSONLINES LPAREN INVERTEDCOMMA FILENAME INVERTEDCOMMA RPAREN DOT pathexpr SATISFIES wexpr'
-    p[0] = ['where', [
-                p[2], [[p[3], p[5]]],
-                ['expr', p[10], p[14]],
-                p[16]
-               ]
-        ]
-
-def p_whereclause_5(p):
-    'whereclause : WHERE quantifier VARIABLE IN JSONLINES LPAREN INVERTEDCOMMA FILENAME INVERTEDCOMMA RPAREN DOT pathexpr SATISFIES wexpr'
-    p[0] = ['where', [
-                p[2], p[3], 
-                [p[7], p[9]], 
-                p[11]
-            ]
-        ]
-
-########################################### quantifiers: SOME, EVERY
-def p_quantifier_1(p):
-    'quantifier : SOME'
-    p[0] = p[1]
-
-def p_quantifier_2(p):
-    'quantifier : EVERY'
-    p[0] = p[1]
-
+def p_wexprs_2(p):
+    'wexprs : wexpr'
+    p[0] = [p[1]]
 
 ########################################### where clause expressions
 def p_wexpr_1(p):
@@ -137,6 +93,14 @@ def p_wexpr_1(p):
     p[0] = ['wexpr', [[p[1], p[3]], p[4], [p[5], p[7]]]]
 
 def p_wexpr_2(p):
+    'wexpr : VARIABLE condition VARIABLE DOT pathexpr'
+    p[0] = ['wexpr', [p[1], p[2], [p[3], p[5]]]]
+
+def p_wexpr_3(p):
+    'wexpr : VARIABLE condition VARIABLE'
+    p[0] = ['wexpr', [p[1], p[2], p[3]]]
+
+def p_wexpr_4(p):
     'wexpr : VARIABLE DOT pathexpr condition STRING'
     p[0] = ['wexpr', [[p[1], p[3]], p[4], p[5]]]
 
@@ -144,15 +108,23 @@ def p_wexpr_5(p):
     'wexpr : VARIABLE condition STRING'
     p[0] = ['wexpr', [p[1], p[2], p[3]]]
 
-def p_wexpr_3(p):
+def p_wexpr_6(p):
     'wexpr : VARIABLE DOT pathexpr condition NUMBER'
     p[0] = ['wexpr', [[p[1], p[3]], p[4], p[5]]]
 
-def p_wexpr_4(p):
+def p_wexpr_7(p):
+    'wexpr : VARIABLE condition NUMBER'
+    p[0] = ['wexpr', [p[1], p[2], p[3]]]
+
+def p_wexpr_8(p):
     'wexpr : CONTAINS LPAREN VARIABLE DOT pathexpr COMMA STRING RPAREN'
     p[0] = ['wexpr', [p[1], [p[3], p[5]], p[7]]]
 
-########################################### conditions : EQUAL, NOTEQUAL, LESSTHANEQUAL, LESSTHAN, GREATERTHANEQUAL, GREATERTHAN
+def p_wexpr_9(p):
+    'wexpr : CONTAINS LPAREN VARIABLE COMMA STRING RPAREN'
+    p[0] = ['wexpr', [p[1], p[3], p[5]]]
+
+########################################### conditions : EQUAL, NOTEQUAL, LESSEQUAL, LESSTHAN, GREATEREQUAL, GREATERTHAN
 def p_condition_1(p):
     'condition : EQUAL'
     p[0] = p[1]
@@ -162,7 +134,7 @@ def p_condition_2(p):
     p[0] = p[1]
 
 def p_condition_3(p):
-    'condition : GREATERTHANEQUAL'
+    'condition : GREATEREQUAL'
     p[0] = p[1]
 
 def p_condition_4(p):
@@ -170,7 +142,7 @@ def p_condition_4(p):
     p[0] = p[1]
 
 def p_condition_5(p):
-    'condition : LESSTHANEQUAL'
+    'condition : LESSEQUAL'
     p[0] = p[1]
 
 def p_condition_6(p):
@@ -277,12 +249,12 @@ parser = yacc.yacc()
 inputdata = '''
 for $question in json-lines("collection-faq.json").faqs[],
             $answer in json-lines("collection-answers.json").answers[]
-        where contains($question.title, "MySQL")
+        where $q.title eq $answer.title and $q.id ge $a.q.id
         return
         {
             "question":$question.title,
             "answer_score":$answer.score
-        };
+        }
         
 '''
 

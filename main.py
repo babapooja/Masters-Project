@@ -55,14 +55,13 @@ QUERY:
     '
 '''
 
-
 from MProjectParser import parser
 import json
 import os
 from pymongo import MongoClient
 import pprint
 from itertools import product
-
+import configparser
 
 class BColors:
     HEADER = '\033[95m'
@@ -85,8 +84,10 @@ class Main(object):
     def __init__(self, prompt) -> None:
         # read the query from input
         self.input_query = self.read_input(prompt)
+        # read config file
+        self.config = self.read_config()
         # try:
-            # parse the query using parser created
+        # parse the query using parser created
         parsed_query = parser.parse(self.input_query)
         # segregate the for clauses, where clauses, and the return clause
         self.for_clauses = parsed_query[0]
@@ -97,6 +98,24 @@ class Main(object):
         #     print('There is syntax error. Please resolve it and try again.\n')
 
     ######################################### HELPER FUNCTIONS #########################################
+    def read_config(self):
+        config_parser = configparser.RawConfigParser()
+        config_parser.read('.jsoniq.cfg')
+        config = dict(config_parser.items('CONNECTION_DETAILS'))
+        return config
+
+    def prepare_connection_string(self):
+        connString = 'mongodb://'
+        if self.config['username'] != '' and self.config['password'] != '':
+            connString += self.config['username'] + ":" + self.config['password'] + "@"
+        if self.config['hostname'] != '':
+            connString += self.config['hostname']
+            if self.config['port'] != '':
+                connString += ":" + self.config['port']
+        # if self.config['database_name'] != '':
+        #     connString += "/" + self.config['database_name']
+        return connString
+
     def readFile(self, filename):
         with open(filename, 'r') as f:
             file_content = json.load(f)
@@ -231,9 +250,8 @@ class Main(object):
     ######################################### Generate MONGODB query and fetch results #########################################
     def generate_mongoDB_query(self):
         # connection to mongodb database
-        client = MongoClient()
-        # how will we understand which database to use??
-        db = client.jsoniq
+        client = MongoClient(self.prepare_connection_string())
+        db = client[self.config['database_name']]
         result = []
         # work on the FOR clause
         updated_query_response = self.handle_for_clauses(db)
@@ -364,13 +382,8 @@ class Main(object):
             lhs = where_clauses[1][0]
             rhs = where_clauses[1][2]
             condition = where_clauses[1][1]
-        if len(where_clauses) == 3:
-            print(where_clauses)
-            # quantifier = where_clauses[1][0]
-            # rhs = where_clauses[1][2]
-            # condition = where_clauses[1][1]
-        
-        return 
+
+        return
 
     ######################################### HANDLE QUERY CLAUSES - FOR, WHERE, RETURN #########################################
 
