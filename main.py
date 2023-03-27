@@ -36,21 +36,14 @@ QUERY:
 
         '
     5. '
-        for $question in json-lines("collection-faq.json").faqs[],
-            $answer in json-lines("collection-answers.json").answers[]
-        where contains($question.title, "MySQL")
-        return
-        {
-            "question":$question.title,
-            "answer_score":$answer.score
-        };
-
-    '
-    6. '
-        for $question in json-lines("collection-faq.json").faqs[]
-        where some $tag in $question.tags[] 
-        satisfies $tag eq "php"
-        return $tag;
+            for $question in json-lines("collection-faq.json").faqs[],
+                $answer in json-lines("collection-answers.json").answers[]
+            where contains($question.title, "MySQL")
+            return
+            {
+                "question":$question.title,
+                "answer_score":$answer.score
+            };
 
     '
 '''
@@ -62,6 +55,7 @@ from pymongo import MongoClient
 import pprint
 from itertools import product
 import configparser
+import re
 
 class BColors:
     HEADER = '\033[95m'
@@ -89,6 +83,7 @@ class Main(object):
         # try:
         # parse the query using parser created
         parsed_query = parser.parse(self.input_query)
+        print(parsed_query)
         # segregate the for clauses, where clauses, and the return clause
         self.for_clauses = parsed_query[0]
         self.return_clause = parsed_query[-1]
@@ -98,12 +93,14 @@ class Main(object):
         #     print('There is syntax error. Please resolve it and try again.\n')
 
     ######################################### HELPER FUNCTIONS #########################################
+    # reading the config file and fetching the configuration
     def read_config(self):
         config_parser = configparser.RawConfigParser()
         config_parser.read('.jsoniq.cfg')
         config = dict(config_parser.items('CONNECTION_DETAILS'))
         return config
 
+    # prepare the connection string based on the configuration for the MongoDB connection
     def prepare_connection_string(self):
         connString = 'mongodb://'
         if self.config['username'] != '' and self.config['password'] != '':
@@ -112,14 +109,7 @@ class Main(object):
             connString += self.config['hostname']
             if self.config['port'] != '':
                 connString += ":" + self.config['port']
-        # if self.config['database_name'] != '':
-        #     connString += "/" + self.config['database_name']
         return connString
-
-    def readFile(self, filename):
-        with open(filename, 'r') as f:
-            file_content = json.load(f)
-        return file_content
 
     # for multiple expressions in for, perform corss multiplication of the data
     def cross_product(self, data):
@@ -152,18 +142,6 @@ class Main(object):
     ######################################### HELPER FUNCTIONS #########################################
 
     ######################################### SEMANTIC ERRORS CHECK #########################################
-    # check if file exists
-    def check_for_file(self):
-        res = dict({"is_valid": True, "message": "File(s) found."})
-        expressions = self.for_clauses[1]
-        for expression in expressions:
-            filename = expression[1][1]
-            # check if the file exists
-            if not os.path.isfile(filename):
-                res['is_valid'] = False
-                res['message'] = f"File '{filename}' does not exist in the current directory."
-                break
-        return res
 
     # check if variables are declared earlier
     def check_for_variables(self):
@@ -253,16 +231,18 @@ class Main(object):
         client = MongoClient(self.prepare_connection_string())
         db = client[self.config['database_name']]
         result = []
+
+        # work on the WHERE calause if the where_clauses have been specified
+        # if len(self.where_clauses)>=1:
+        #     updated_query_response = self.handle_where_clause(db)
+        
         # work on the FOR clause
         updated_query_response = self.handle_for_clauses(db)
 
         if len(updated_query_response) > 1:
             updated_query_response = self.cross_product(updated_query_response)
 
-        # work on the WHERE calause if the where_clauses have been specified
-        if len(self.where_clauses) > 1:
-            updated_query_response = self.handle_where_clause(
-                updated_query_response)
+        
 
         # work on the RETURN clause
         if type(updated_query_response).__name__ == 'list':
@@ -283,9 +263,12 @@ class Main(object):
         updated_query_response = []
         expressions = self.for_clauses[1]
         for expression in expressions:
+            query = {}
             collection_name = expression[1][1].split('.')[0]
             collection = db[collection_name]
-            query_response = list(collection.find({}))
+            if len(self.where_clauses):
+                query = self.handle_where_clause(expression[1][0])
+            query_response = list(collection.find(query))
             path_expressions = expression[1][2]
             for path_expression in path_expressions:
                 if type(path_expression).__name__ == 'list':
@@ -299,8 +282,6 @@ class Main(object):
                     if path_expression[1] != '':
                         query_response = query_response[path_expression[1]]
                 else:
-                    # for qr in query_response:
-                    #     temp.append(qr[path_expression])
                     query_response = query_response[path_expression]
             updated_query_response.append(query_response)
         return updated_query_response
@@ -371,19 +352,28 @@ class Main(object):
                 result.append(return_data)
         return result
 
-    def handle_where_clause(self, query_data):
+    def handle_where_clause(self, variable):
         where_clauses = self.where_clauses[1]
-        print(where_clauses)
-        if len(where_clauses) == 2 and where_clauses[0] == 'wexpr':
-            lhs = where_clauses[1][0]
-            rhs = where_clauses[1][2]
-            condition = where_clauses[1][1]
-        if len(where_clauses) == 2 and where_clauses[0] == 'contains':
-            lhs = where_clauses[1][0]
-            rhs = where_clauses[1][2]
-            condition = where_clauses[1][1]
+        query = {}
+        query_str = ''
+        for where_clause in where_clauses:
+            if where_clause[1][0][0] == variable:
+                if where_clause[0] == 'wexpr':
+                    lhs = where_clause[1][0]
+                    condition = where_clause[1][1]
+                    rhs = where_clause[1][2]
 
-        return
+                elif where_clause[0] == 'contains':
+                    lhs = where_clause[1][0]
+                    rhs = where_clause[1][1]
+                    for x in lhs[1]:
+                        if type(x).__name__ == 'str':
+                            query_str += x
+                        else:
+                            query_str += x[0]
+                    query = {query_str: {'$regex':rhs.replace('"','')}}
+
+        return query
 
     ######################################### HANDLE QUERY CLAUSES - FOR, WHERE, RETURN #########################################
 
@@ -397,7 +387,7 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------------------------------------{BColors.ENDC}
     ''')
     mainObj = Main("Enter an input query")
-    mainObj.check_for_file()
+    # mainObj.check_for_file()
     pprint.pprint(mainObj.generate_mongoDB_query())
     # if mainObj.check_semantic_errors():
     #     print(f'{BColors.UNDERLINE}\nResults for above query{BColors.ENDC}')

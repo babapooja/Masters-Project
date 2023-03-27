@@ -118,11 +118,11 @@ def p_wexpr_7(p):
 
 def p_wexpr_8(p):
     'wexpr : CONTAINS LPAREN VARIABLE DOT pathexpr COMMA STRING RPAREN'
-    p[0] = ['wexpr', [p[1], [p[3], p[5]], p[7]]]
+    p[0] = ['contains', [[p[3], p[5]], p[7]]]
 
 def p_wexpr_9(p):
     'wexpr : CONTAINS LPAREN VARIABLE COMMA STRING RPAREN'
-    p[0] = ['wexpr', [p[1], p[3], p[5]]]
+    p[0] = ['contains', [p[3], p[5]]]
 
 ########################################### conditions : EQUAL, NOTEQUAL, LESSEQUAL, LESSTHAN, GREATEREQUAL, GREATERTHAN
 def p_condition_1(p):
@@ -258,11 +258,11 @@ for $question in json-lines("collection-faq.json").faqs[],
         
 '''
 
-while True:
-    try:
-        # Use raw_input on Python 2
-        res = parser.parse(inputdata)
-        print('RES: ', res)
-        break
-    except EOFError:
-        break
+# while True:
+#     try:
+#         # Use raw_input on Python 2
+#         res = parser.parse(inputdata)
+#         print('RES: ', res)
+#         break
+#     except EOFError:
+#         break
