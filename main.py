@@ -24,7 +24,7 @@ QUERY:
             };
 
         '
-    4. '
+    4. ' 
             for $question in json-lines("collection-faq.json").faqs[],
                 $answer in json-lines("collection-answers.json").answers[]
             where $question.question_id eq $answer.question_id
@@ -35,14 +35,35 @@ QUERY:
             };
 
         '
-    5. '
+    5. '    ************* todo
             for $question in json-lines("collection-faq.json").faqs[],
                 $answer in json-lines("collection-answers.json").answers[]
-            where contains($question.title, "MySQL")
+            where $question.question_id eq $answer.question_id and $answer.answer_id eq $answer.answer_id
             return
             {
                 "question":$question.title,
                 "answer_score":$answer.score
+            };
+
+        '
+    6. '
+            for $answer in json-lines("collection-answers.json").answers[]
+            where $answer.score ge 4
+            return $answer.question_id;
+
+        '
+    7. '
+            for $faq in json-lines("collection-faq.json").faqs[]
+            where $faq.title eq "Databases"
+            return $faq.tags;
+
+        '
+    8. '
+            for $question in json-lines("collection-faq.json").faqs[]
+            where contains($question.title, "MySQL")
+            return
+            {
+                "question":$question.title
             };
 
     '
@@ -55,7 +76,7 @@ from pymongo import MongoClient
 import pprint
 from itertools import product
 import configparser
-import re
+
 
 class BColors:
     HEADER = '\033[95m'
@@ -83,7 +104,7 @@ class Main(object):
         # try:
         # parse the query using parser created
         parsed_query = parser.parse(self.input_query)
-        print(parsed_query)
+        # print(parsed_query)
         # segregate the for clauses, where clauses, and the return clause
         self.for_clauses = parsed_query[0]
         self.return_clause = parsed_query[-1]
@@ -104,7 +125,8 @@ class Main(object):
     def prepare_connection_string(self):
         connString = 'mongodb://'
         if self.config['username'] != '' and self.config['password'] != '':
-            connString += self.config['username'] + ":" + self.config['password'] + "@"
+            connString += self.config['username'] + \
+                ":" + self.config['password'] + "@"
         if self.config['hostname'] != '':
             connString += self.config['hostname']
             if self.config['port'] != '':
@@ -233,16 +255,15 @@ class Main(object):
         result = []
 
         # work on the WHERE calause if the where_clauses have been specified
-        # if len(self.where_clauses)>=1:
-        #     updated_query_response = self.handle_where_clause(db)
-        
+        if len(self.where_clauses) >= 1:
+            updated_query_response = self.handle_where_clause(db)
+
         # work on the FOR clause
-        updated_query_response = self.handle_for_clauses(db)
+        if not len(self.where_clauses):
+            updated_query_response = self.handle_for_clauses(db)
 
-        if len(updated_query_response) > 1:
+        if len(updated_query_response) > 1 and not len(self.where_clauses):
             updated_query_response = self.cross_product(updated_query_response)
-
-        
 
         # work on the RETURN clause
         if type(updated_query_response).__name__ == 'list':
@@ -262,13 +283,14 @@ class Main(object):
     def handle_for_clauses(self, db):
         updated_query_response = []
         expressions = self.for_clauses[1]
+
         for expression in expressions:
-            query = {}
             collection_name = expression[1][1].split('.')[0]
             collection = db[collection_name]
-            if len(self.where_clauses):
-                query = self.handle_where_clause(expression[1][0])
-            query_response = list(collection.find(query))
+            # if len(self.where_clauses):
+            #     query = self.handle_where_clause(expressions)
+            #     updated_query_response = list(collection.find(query))
+            query_response = list(collection.find({}))
             path_expressions = expression[1][2]
             for path_expression in path_expressions:
                 if type(path_expression).__name__ == 'list':
@@ -352,16 +374,49 @@ class Main(object):
                 result.append(return_data)
         return result
 
-    def handle_where_clause(self, variable):
+    def handle_multiple_where_clauses(self, where_clauses, expressions, db):
+        query_response = []
+        
+        return query_response
+
+    def handle_where_clause(self, db):
         where_clauses = self.where_clauses[1]
-        query = {}
-        query_str = ''
-        for where_clause in where_clauses:
-            if where_clause[1][0][0] == variable:
+        expressions = self.for_clauses[1]
+        mongoCollection = {}
+        query_response = []
+        for expression in expressions:
+            collection_name = expression[1][1].split('.')[0]
+            variable = expression[1][0]
+            mongoCollection[collection_name] = []
+
+            if len(where_clauses) == 1:
+                where_clause = where_clauses[0]
                 if where_clause[0] == 'wexpr':
+                    lhs_query_str = ''
+                    rhs_query_str = ''
                     lhs = where_clause[1][0]
                     condition = where_clause[1][1]
                     rhs = where_clause[1][2]
+                    for x in lhs[1]:
+                        if type(x).__name__ == 'str':
+                            lhs_query_str += x
+                        else:
+                            lhs_query_str += x[0]
+                    if where_clause[1][0][0] == variable:
+                        mongoCollection[collection_name] = lhs_query_str
+
+                    if type(rhs).__name__ == 'str' or type(rhs).__name__ == 'int':
+                        query = {lhs_query_str: {condition: rhs}}
+                        query_response = list(db[collection_name].find(query))
+                        break
+                    elif type(rhs).__name__ == 'list':
+                        for x in rhs[1]:
+                            if type(x).__name__ == 'str':
+                                rhs_query_str += x
+                            else:
+                                rhs_query_str += x[0]
+                        if where_clause[1][2][0] == variable:
+                            mongoCollection[collection_name] = rhs_query_str
 
                 elif where_clause[0] == 'contains':
                     lhs = where_clause[1][0]
@@ -371,9 +426,37 @@ class Main(object):
                             query_str += x
                         else:
                             query_str += x[0]
-                    query = {query_str: {'$regex':rhs.replace('"','')}}
+                    query = {query_str: {'$regex': rhs.replace('"', '')}}
+                    query_response = list(db[collection_name].find(query))
 
-        return query
+
+        if len(where_clauses) == 1 and where_clauses[0][0] != 'contains' and type(where_clauses[0][1][2]).__name__ not in ('str', 'int'):
+            _keys = list(mongoCollection.keys())
+            if len(_keys) > 1:
+                q = {
+                    '$lookup': {
+                        'from': _keys[1],
+                        'localField': mongoCollection[_keys[0]],
+                        'foreignField': mongoCollection[_keys[1]],
+                        'as': 'joinedResult'
+                    }
+                }
+                query_response = list(db[_keys[0]].aggregate([q]))
+            else:
+                q = {
+                    '$lookup': {
+                        'from': _keys[0],
+                        'localField': mongoCollection[_keys[0]],
+                        'foreignField': mongoCollection[_keys[0]],
+                        'as': 'joinedResult'
+                    }
+                }
+                query_response = list(db[_keys[0]].aggregate([q]))
+        else:
+            query_response = self.handle_multiple_where_clauses(
+                where_clauses, expressions, db)
+
+        return query_response
 
     ######################################### HANDLE QUERY CLAUSES - FOR, WHERE, RETURN #########################################
 

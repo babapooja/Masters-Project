@@ -127,27 +127,27 @@ def p_wexpr_9(p):
 ########################################### conditions : EQUAL, NOTEQUAL, LESSEQUAL, LESSTHAN, GREATEREQUAL, GREATERTHAN
 def p_condition_1(p):
     'condition : EQUAL'
-    p[0] = p[1]
+    p[0] = '$eq'
     
 def p_condition_2(p):
     'condition : NOTEQUAL'
-    p[0] = p[1]
+    p[0] = '$ne'
 
 def p_condition_3(p):
     'condition : GREATEREQUAL'
-    p[0] = p[1]
+    p[0] = '$gte'
 
 def p_condition_4(p):
     'condition : GREATERTHAN'
-    p[0] = p[1]
+    p[0] = '$gt'
 
 def p_condition_5(p):
     'condition : LESSEQUAL'
-    p[0] = p[1]
+    p[0] = '$lte'
 
 def p_condition_6(p):
     'condition : LESSTHAN'
-    p[0] = p[1]
+    p[0] = '$lt'
 
 ########################################### for clause expressions
 
@@ -247,22 +247,16 @@ parser = yacc.yacc()
 
 
 inputdata = '''
-for $question in json-lines("collection-faq.json").faqs[],
-            $answer in json-lines("collection-answers.json").answers[]
-        where $q.title eq $answer.title and $q.id ge $a.q.id
-        return
-        {
-            "question":$question.title,
-            "answer_score":$answer.score
-        }
-        
+for $faq in json-lines('collection-faq.json').faqs[]
+            where $faq.title eq "Next-gen Databases"
+            return $faq.tags  
 '''
 
-# while True:
-#     try:
-#         # Use raw_input on Python 2
-#         res = parser.parse(inputdata)
-#         print('RES: ', res)
-#         break
-#     except EOFError:
-#         break
+while True:
+    try:
+        # Use raw_input on Python 2
+        res = parser.parse(inputdata)
+        print('RES: ', res)
+        break
+    except EOFError:
+        break

@@ -26,7 +26,7 @@ tokens = [
 # Tokens
 
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'  # eg: john
-t_STRING = r'\"[a-zA-Z_][a-zA-Z0-9_]*"'  # eg: "john"
+t_INVERTEDCOMMA = r'["\']'
 t_FILENAME = r"[a-zA-Z_][a-zA-Z0-9-_]*.json"  # eg: 'abc.json'
 t_VARIABLE = r'\$[a-zA-Z_][a-zA-Z0-9_]*'
 t_DOT = r'\.'
@@ -38,8 +38,13 @@ t_RPAREN = r'\)'
 t_LCBRACKET = r'\{'
 t_RCBRACKET = r'\}'
 t_COMMA = r'\,'
-t_INVERTEDCOMMA = r'["\']'
 t_ignore_COMMENT = r'\#.*'
+
+
+def t_STRING(t):
+    r'"(?:\\.|[^"\\])*"'
+    t.value = t.value.strip('"')
+    return t
 
 
 def t_JSONLINES(t):
@@ -146,17 +151,14 @@ def t_error(t):
 lexer = lex.lex()
 
 inputdata = '''
-FOR $x in json-lines("collection-answers.json").answers[]
-where contains($x.abc, "ABC")
-            return
-                {
-                    "answer_id" : $x.answer_id,
-                    "q_id" : $x.question_id
-                }
+for $faq in json-lines('collection-faq.json').faqs[]
+            where $faq.title eq "The next-gen 'databases'"
+            return $faq.tags
+
 '''
-# lexer.input(inputdata)
-# while True:
-#     tok = lexer.token()
-#     if not tok:
-#         break
-#     print(tok)
+lexer.input(inputdata)
+while True:
+    tok = lexer.token()
+    if not tok:
+        break
+    print(tok)
