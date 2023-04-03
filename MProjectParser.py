@@ -247,16 +247,20 @@ parser = yacc.yacc()
 
 
 inputdata = '''
-for $faq in json-lines('collection-faq.json').faqs[]
-            where $faq.title eq "Next-gen Databases"
-            return $faq.tags  
+FOR $x in json-lines('collection-answers.json').answers[]
+            return
+                {
+                    "answer_id" : $x.answer_id,
+                    "q_id" : $x.question_id
+                }
+ 
 '''
 
-while True:
-    try:
-        # Use raw_input on Python 2
-        res = parser.parse(inputdata)
-        print('RES: ', res)
-        break
-    except EOFError:
-        break
+# while True:
+#     try:
+#         # Use raw_input on Python 2
+#         res = parser.parse(inputdata)
+#         print('RES: ', res)
+#         break
+#     except EOFError:
+#         break

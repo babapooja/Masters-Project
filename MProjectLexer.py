@@ -151,14 +151,16 @@ def t_error(t):
 lexer = lex.lex()
 
 inputdata = '''
-for $faq in json-lines('collection-faq.json').faqs[]
-            where $faq.title eq "The next-gen 'databases'"
-            return $faq.tags
-
+FOR $x in json-lines('collection-answers.json').answers[]
+            return
+                {
+                    "answer_id" : $x.answer_id,
+                    "q_id" : $x.question_id
+                }
 '''
-lexer.input(inputdata)
-while True:
-    tok = lexer.token()
-    if not tok:
-        break
-    print(tok)
+# lexer.input(inputdata)
+# while True:
+#     tok = lexer.token()
+#     if not tok:
+#         break
+#     print(tok)

@@ -1,7 +1,7 @@
 '''
 QUERY:
     1. '
-            FOR $x in json-lines("collection-answers.json").answers[]
+            FOR $x in json-lines('collection-answers.json').answers[]
             return
                 {
                     "answer_id" : $x.answer_id,
@@ -35,10 +35,12 @@ QUERY:
             };
 
         '
-    5. '    ************* todo
+    5. '    
             for $question in json-lines("collection-faq.json").faqs[],
                 $answer in json-lines("collection-answers.json").answers[]
-            where $question.question_id eq $answer.question_id and $answer.answer_id eq $answer.answer_id
+            where $question.question_id eq $answer.question_id and 
+                $answer.answer_id eq $answer.answer_id
+                $answer.answer_id eq $answer.answer_id
             return
             {
                 "question":$question.title,
@@ -75,19 +77,8 @@ import os
 from pymongo import MongoClient
 import pprint
 from itertools import product
-import configparser
-
-
-class BColors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+from Config import config_data
+from ConsoleColors import cColors
 
 
 class Main(object):
@@ -97,33 +88,31 @@ class Main(object):
     input_query = ''
 
     def __init__(self, prompt) -> None:
-        # read the query from input
         self.input_query = self.read_input(prompt)
-        # read config file
-        self.config = self.read_config()
+        self.config = config_data
         # try:
-        # parse the query using parser created
         parsed_query = parser.parse(self.input_query)
         # print(parsed_query)
         # segregate the for clauses, where clauses, and the return clause
-        self.for_clauses = parsed_query[0]
-        self.return_clause = parsed_query[-1]
-        if len(parsed_query) > 2:
-            self.where_clauses = parsed_query[1]
+        self.segregate_clauses(parsed_query)
         # except:
         #     print('There is syntax error. Please resolve it and try again.\n')
 
     ######################################### HELPER FUNCTIONS #########################################
-    # reading the config file and fetching the configuration
-    def read_config(self):
-        config_parser = configparser.RawConfigParser()
-        config_parser.read('.jsoniq.cfg')
-        config = dict(config_parser.items('CONNECTION_DETAILS'))
-        return config
+    # segregate clauses
+    def segregate_clauses(self, parsed_query):
+        for clause in parsed_query:
+            if clause[0] == 'for':
+                self.for_clauses = clause
+            elif clause[0] == 'where':
+                self.where_clauses = clause
+            elif clause[0] == 'return':
+                self.return_clauses = clause
 
     # prepare the connection string based on the configuration for the MongoDB connection
     def prepare_connection_string(self):
         connString = 'mongodb://'
+        print(self.config)
         if self.config['username'] != '' and self.config['password'] != '':
             connString += self.config['username'] + \
                 ":" + self.config['password'] + "@"
@@ -236,7 +225,7 @@ class Main(object):
             # 'file_check': self.check_for_file(),
             'variables_check': self.check_for_variables()
         }
-        print(f'{BColors.UNDERLINE}\nChecking for semantic errors{BColors.ENDC}')
+        print(f'{cColors.UNDERLINE}\nChecking for semantic errors{cColors.ENDC}')
         # print(f'File validity: {validities["file_check"]["message"]}')
         # print(
         #     f'File content(s) validity: {self.check_for_file_contents()["message"]}')
@@ -376,7 +365,7 @@ class Main(object):
 
     def handle_multiple_where_clauses(self, where_clauses, expressions, db):
         query_response = []
-        
+
         return query_response
 
     def handle_where_clause(self, db):
@@ -429,7 +418,6 @@ class Main(object):
                     query = {query_str: {'$regex': rhs.replace('"', '')}}
                     query_response = list(db[collection_name].find(query))
 
-
         if len(where_clauses) == 1 and where_clauses[0][0] != 'contains' and type(where_clauses[0][1][2]).__name__ not in ('str', 'int'):
             _keys = list(mongoCollection.keys())
             if len(_keys) > 1:
@@ -463,19 +451,19 @@ class Main(object):
 
 ######################################### ENTRY POINT #########################################
 if __name__ == '__main__':
-    print(f'''{BColors.OKBLUE}
+    print(f'''{cColors.OKBLUE}
     -----------------------------------------------------------------------------------------------------------------------
     Enter the input query in JSONiq starting from the next line. To mark the end of the input query, add ';' at the end.
     To run the query, press enter.
-    -----------------------------------------------------------------------------------------------------------------------{BColors.ENDC}
+    -----------------------------------------------------------------------------------------------------------------------{cColors.ENDC}
     ''')
     mainObj = Main("Enter an input query")
     # mainObj.check_for_file()
     pprint.pprint(mainObj.generate_mongoDB_query())
     # if mainObj.check_semantic_errors():
-    #     print(f'{BColors.UNDERLINE}\nResults for above query{BColors.ENDC}')
+    #     print(f'{cColors.UNDERLINE}\nResults for above query{cColors.ENDC}')
     #     pprint.pprint(mainObj.generate_mongoDB_query())
-    #     print(f'{BColors.OKGREEN}\nFetched data successfully...\n\n{BColors.ENDC}')
+    #     print(f'{cColors.OKGREEN}\nFetched data successfully...\n\n{cColors.ENDC}')
     # else:
     #     print(
-    #         f'{BColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{BColors.ENDC}')
+    #         f'{cColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{cColors.ENDC}')
