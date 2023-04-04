@@ -10,13 +10,13 @@ QUERY:
 
         '
     2. '
-            for $x in json-lines("collection-faq.json").faqs[]
+            for $x in json-lines('collection-faq.json').faqs[]
             return $x.tags[1];
 
         '
     3. '
-            for $question in json-lines("collection-faq.json").faqs[],
-                $answer in json-lines("collection-answers.json").answers[]
+            for $question in json-lines('collection-faq.json').faqs[],
+                $answer in json-lines(collection-answers.json').answers[]
             return
             {
                 "question":$question.title,
@@ -25,8 +25,8 @@ QUERY:
 
         '
     4. ' 
-            for $question in json-lines("collection-faq.json").faqs[],
-                $answer in json-lines("collection-answers.json").answers[]
+            for $question in json-lines('collection-faq.json').faqs[],
+                $answer in json-lines(collection-answers.json').answers[]
             where $question.question_id eq $answer.question_id
             return
             {
@@ -36,8 +36,8 @@ QUERY:
 
         '
     5. '    
-            for $question in json-lines("collection-faq.json").faqs[],
-                $answer in json-lines("collection-answers.json").answers[]
+            for $question in json-lines('collection-faq.json').faqs[],
+                $answer in json-lines(collection-answers.json').answers[]
             where $question.question_id eq $answer.question_id and 
                 $answer.answer_id eq $answer.answer_id
                 $answer.answer_id eq $answer.answer_id
@@ -49,19 +49,19 @@ QUERY:
 
         '
     6. '
-            for $answer in json-lines("collection-answers.json").answers[]
+            for $answer in json-lines(collection-answers.json').answers[]
             where $answer.score ge 4
             return $answer.question_id;
 
         '
     7. '
-            for $faq in json-lines("collection-faq.json").faqs[]
+            for $faq in json-lines('collection-faq.json').faqs[]
             where $faq.title eq "Databases"
             return $faq.tags;
 
         '
     8. '
-            for $question in json-lines("collection-faq.json").faqs[]
+            for $question in json-lines('collection-faq.json').faqs[]
             where contains($question.title, "MySQL")
             return
             {
