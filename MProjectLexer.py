@@ -151,12 +151,17 @@ def t_error(t):
 lexer = lex.lex()
 
 inputdata = '''
-FOR $x in json-lines('collection-answers.json').answers[]
+for $question in json-lines('collection-faq.json').faqs[],
+                $answer in json-lines('collection-answers.json').answers[]
+            where $question.question_id eq $answer.question_id and 
+                $answer.answer_id eq $answer.answer_id
+                $answer.answer_id eq $answer.answer_id
             return
-                {
-                    "answer_id" : $x.answer_id,
-                    "q_id" : $x.question_id
-                }
+            {
+                "question":$question.title,
+                "answer_score":$answer.score
+            };
+
 '''
 # lexer.input(inputdata)
 # while True:

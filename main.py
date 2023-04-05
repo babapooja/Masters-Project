@@ -16,7 +16,7 @@ QUERY:
         '
     3. '
             for $question in json-lines('collection-faq.json').faqs[],
-                $answer in json-lines(collection-answers.json').answers[]
+                $answer in json-lines('collection-answers.json').answers[]
             return
             {
                 "question":$question.title,
@@ -24,9 +24,9 @@ QUERY:
             };
 
         '
-    4. ' 
+    4. '
             for $question in json-lines('collection-faq.json').faqs[],
-                $answer in json-lines(collection-answers.json').answers[]
+                $answer in json-lines('collection-answers.json').answers[]
             where $question.question_id eq $answer.question_id
             return
             {
@@ -35,21 +35,23 @@ QUERY:
             };
 
         '
-    5. '    
+    5. '
             for $question in json-lines('collection-faq.json').faqs[],
-                $answer in json-lines(collection-answers.json').answers[]
-            where $question.question_id eq $answer.question_id and 
-                $answer.answer_id eq $answer.answer_id
-                $answer.answer_id eq $answer.answer_id
+                $answer in json-lines('collection-answers.json').answers[]
+            where contains($question.title, "MySQL") and
+            $question.question_id eq $answer.question_id and
+            $question.score gt 4
+                
             return
             {
                 "question":$question.title,
                 "answer_score":$answer.score
             };
 
+                
         '
     6. '
-            for $answer in json-lines(collection-answers.json').answers[]
+            for $answer in json-lines('collection-answers.json').answers[]
             where $answer.score ge 4
             return $answer.question_id;
 
@@ -107,12 +109,11 @@ class Main(object):
             elif clause[0] == 'where':
                 self.where_clauses = clause
             elif clause[0] == 'return':
-                self.return_clauses = clause
+                self.return_clause = clause
 
     # prepare the connection string based on the configuration for the MongoDB connection
     def prepare_connection_string(self):
         connString = 'mongodb://'
-        print(self.config)
         if self.config['username'] != '' and self.config['password'] != '':
             connString += self.config['username'] + \
                 ":" + self.config['password'] + "@"
@@ -150,11 +151,53 @@ class Main(object):
                 result += data + ' '
         return result[:-1]
 
+    # check condition value
+    def check_condition(self, lhs_data, lhs_key, condition, rhs_data, rhs_key, join=False):
+        final_res = []
+        if condition == '$eq':
+            if not join:
+                final_res = [i for i in lhs_data if i[lhs_key] == rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] == j[rhs_key]]
+        elif condition == '$gt':
+            if not join:
+                final_res = [i for i in lhs_data[0] if i[lhs_key] > rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] > j[rhs_key]]
+        elif condition == '$gte':
+            if not join:
+                final_res = [i for i in lhs_data[0] if i[lhs_key] >= rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] >= j[rhs_key]]
+        elif condition == '$lt':
+            if not join:
+                final_res = [i for i in lhs_data[0] if i[lhs_key] < rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] < j[rhs_key]]
+        elif condition == '$lte':
+            if not join:
+                final_res = [i for i in lhs_data[0] if i[lhs_key] <= rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] <= j[rhs_key]]
+        elif condition == '$ne':
+            if not join:
+                final_res = [i for i in lhs_data[0] if i[lhs_key] != rhs_key]
+            else:
+                final_res = [self.cross_product(
+                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] != j[rhs_key]]
+
+        return final_res
     ######################################### HELPER FUNCTIONS #########################################
 
     ######################################### SEMANTIC ERRORS CHECK #########################################
 
     # check if variables are declared earlier
+
     def check_for_variables(self):
         res = dict({"is_valid": True, "message": "Variables are valid"})
         expressions = self.for_clauses[1]
@@ -246,6 +289,7 @@ class Main(object):
         # work on the WHERE calause if the where_clauses have been specified
         if len(self.where_clauses) >= 1:
             updated_query_response = self.handle_where_clause(db)
+            # updated_query_response = self.handle_multiple_where_clauses(db)
 
         # work on the FOR clause
         if not len(self.where_clauses):
@@ -364,15 +408,80 @@ class Main(object):
         return result
 
     def handle_multiple_where_clauses(self, where_clauses, expressions, db):
-        query_response = []
+        all_data = {}
+        result = []
+        for expression in expressions:
+            collection_name = expression[1][1].split('.')[0]
+            temp = list(db[collection_name].find({}))
+            all_data[expression[1][0]] = temp
 
-        return query_response
+        # for data in all_data:
+        for where_expression in where_clauses:
+            if where_expression[0] == 'wexpr':
+                tempr, templ = {}, {}
+                exp = where_expression[1]
+                lhs = exp[0]
+                lhs_variable = lhs[0]
+                condition = exp[1]
+                rhs = exp[2]
+                rhs_variable = rhs[0] if type(rhs).__name__ == 'list' else rhs
+                if type(rhs).__name__ == 'list':
+                    for x in rhs[1]:
+                        if type(x).__name__ == 'str' and rhs[-1][-1] != x:
+                            if not tempr:
+                                if not result:
+                                    tempr = [data[x]
+                                             for data in all_data[rhs[0]]]
+                                else:
+                                    tempr = [data[x] for data in result]
+                            else:
+                                tempr = tempr[x]
+                for x in lhs[1]:
+                    if type(x).__name__ == 'str' and lhs[-1][-1] != x:
+                        if not templ:
+                            if not result:
+                                templ = [data[x] for data in all_data[lhs_variable]]
+                            else:
+                                templ = [data[x] for data in result]
+                        else:
+                            templ = templ[x]
+
+                if not templ:
+                    templ = all_data[lhs_variable] if not result else result
+                if not tempr:
+                    tempr = all_data[rhs_variable] if not result else result
+
+                if type(rhs).__name__ == 'list':
+                    rhs_key = rhs[-1][-1]
+                    join = True
+                else:
+                    rhs_key = rhs
+                    join = False
+                result = self.check_condition(
+                    templ, lhs[-1][-1], condition, tempr, rhs_key, join)
+
+            elif where_expression[0] == 'contains':
+                exp = where_expression[1]
+                lhs, rhs, temp = exp[0], exp[1], []
+                for x in lhs[1]:
+                    if type(x).__name__ == 'str':
+                        if not result:
+                            for data in all_data[lhs[0]]:
+                                if rhs in data[x][0]:
+                                    temp.append(data)
+                        else:
+                            for data in result:
+                                if rhs in data[0][x]:
+                                    temp.append(data)
+                result = temp
+        return result
 
     def handle_where_clause(self, db):
         where_clauses = self.where_clauses[1]
         expressions = self.for_clauses[1]
         mongoCollection = {}
         query_response = []
+        query_str = ''
         for expression in expressions:
             collection_name = expression[1][1].split('.')[0]
             variable = expression[1][0]
@@ -397,7 +506,7 @@ class Main(object):
                     if type(rhs).__name__ == 'str' or type(rhs).__name__ == 'int':
                         query = {lhs_query_str: {condition: rhs}}
                         query_response = list(db[collection_name].find(query))
-                        break
+                        return query_response
                     elif type(rhs).__name__ == 'list':
                         for x in rhs[1]:
                             if type(x).__name__ == 'str':
@@ -406,7 +515,6 @@ class Main(object):
                                 rhs_query_str += x[0]
                         if where_clause[1][2][0] == variable:
                             mongoCollection[collection_name] = rhs_query_str
-
                 elif where_clause[0] == 'contains':
                     lhs = where_clause[1][0]
                     rhs = where_clause[1][1]
@@ -417,6 +525,7 @@ class Main(object):
                             query_str += x[0]
                     query = {query_str: {'$regex': rhs.replace('"', '')}}
                     query_response = list(db[collection_name].find(query))
+                    return query_response
 
         if len(where_clauses) == 1 and where_clauses[0][0] != 'contains' and type(where_clauses[0][1][2]).__name__ not in ('str', 'int'):
             _keys = list(mongoCollection.keys())
