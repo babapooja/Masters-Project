@@ -74,8 +74,6 @@ QUERY:
 '''
 
 from MProjectParser import parser
-import json
-import os
 from pymongo import MongoClient
 import pprint
 from itertools import product
@@ -94,7 +92,6 @@ class Main(object):
         self.config = config_data
         # try:
         parsed_query = parser.parse(self.input_query)
-        # print(parsed_query)
         # segregate the for clauses, where clauses, and the return clause
         self.segregate_clauses(parsed_query)
         # except:
@@ -156,10 +153,19 @@ class Main(object):
         final_res = []
         if condition == '$eq':
             if not join:
-                final_res = [i for i in lhs_data if i[lhs_key] == rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] == rhs_key:
+                            final_res.append(i)
+                # final_res = [i for i in lhs_data if i[lhs_key] == rhs_key]
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] == j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] == j[rhs_key]:
+                                final_res.append(self.cross_product([[i],[j]]))
+                # final_res = [self.cross_product(
+                #     [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] == j[rhs_key]]
         elif condition == '$gt':
             if not join:
                 final_res = [i for i in lhs_data[0] if i[lhs_key] > rhs_key]
@@ -197,7 +203,6 @@ class Main(object):
     ######################################### SEMANTIC ERRORS CHECK #########################################
 
     # check if variables are declared earlier
-
     def check_for_variables(self):
         res = dict({"is_valid": True, "message": "Variables are valid"})
         expressions = self.for_clauses[1]
@@ -223,60 +228,15 @@ class Main(object):
 
         return res
 
-    # check for valid file contents
-    '''
-    def check_for_file_contents(self):
-        res = dict({"is_valid": True, "message": "File content(s) are valid."})
-        expressions = self.for_clauses[1]
-        # iterate over all the expressions
-        for expression in expressions:
-            filename = expression[1][1]
-            file_contents = self.readFile(filename)
-            path_expressions = expression[1][2]
-            # iterate through the path expressions
-            for path_expression in path_expressions:
-                content_type = type(path_expression).__name__
-                # if token is a string
-                if content_type == 'str':
-                    try:
-                        file_contents = file_contents[path_expression]
-                    except:
-                        res['is_valid'] = False
-                        res['message'] = f"'{path_expression}' is invalid. Please check your query."
-                        break
-                elif content_type == 'list':
-                    try:
-                        file_contents = file_contents[path_expression[0]]
-                        if type(file_contents).__name__ == 'list':
-                            # only if the index is a number else the contents remain as is
-                            if path_expression[1] != '':
-                                file_contents = file_contents[path_expression[1]]
-                        else:
-                            res['is_valid'] = False
-                            res['message'] = f"'{path_expression[0]}' is not an array in {filename}"
-                            break
-                    except:
-                        res['is_valid'] = False
-                        res['message'] = f"'{path_expression}' is invalid. Please check your query."
-                        break
-        return res
-        '''
-
     # wrapper function that calls all the checks listed above
     def check_semantic_errors(self) -> dict:
         validities = {
-            # 'file_check': self.check_for_file(),
             'variables_check': self.check_for_variables()
         }
         print(f'{cColors.UNDERLINE}\nChecking for semantic errors{cColors.ENDC}')
-        # print(f'File validity: {validities["file_check"]["message"]}')
-        # print(
-        #     f'File content(s) validity: {self.check_for_file_contents()["message"]}')
-        print(
-            f'Variables validity: {validities["variables_check"]["message"]}')
+        print(f'Variables validity: {validities["variables_check"]["message"]}')
 
         return (validities['variables_check']['is_valid'])
-        # and validities['file_check']['is_valid'] )
     ######################################### SEMANTIC ERRORS CHECK #########################################
 
     ######################################### Generate MONGODB query and fetch results #########################################
@@ -288,8 +248,7 @@ class Main(object):
 
         # work on the WHERE calause if the where_clauses have been specified
         if len(self.where_clauses) >= 1:
-            updated_query_response = self.handle_where_clause(db)
-            # updated_query_response = self.handle_multiple_where_clauses(db)
+            updated_query_response = self.handle_multiple_where_clauses(self.where_clauses[1], self.for_clauses[1], db)
 
         # work on the FOR clause
         if not len(self.where_clauses):
@@ -320,25 +279,25 @@ class Main(object):
         for expression in expressions:
             collection_name = expression[1][1].split('.')[0]
             collection = db[collection_name]
-            # if len(self.where_clauses):
-            #     query = self.handle_where_clause(expressions)
-            #     updated_query_response = list(collection.find(query))
             query_response = list(collection.find({}))
-            path_expressions = expression[1][2]
-            for path_expression in path_expressions:
-                if type(path_expression).__name__ == 'list':
-                    if query_response[0].__contains__(path_expression[0]):
-                        if type(query_response[0][path_expression[0]]).__name__ == 'list':
-                            if path_expression[1] != '':
-                                query_response = query_response[0][path_expression[0]
-                                                                   ][path_expression[1]]
-                            else:
-                                query_response = query_response[0][path_expression[0]]
-                    if path_expression[1] != '':
-                        query_response = query_response[path_expression[1]]
-                else:
-                    query_response = query_response[path_expression]
-            updated_query_response.append(query_response)
+            path_expressions = expression[1][2] if len(expression[1]) == 3 else []
+            if len(path_expressions):
+                for path_expression in path_expressions:
+                    if type(path_expression).__name__ == 'list':
+                        if query_response[0].__contains__(path_expression[0]):
+                            if type(query_response[0][path_expression[0]]).__name__ == 'list':
+                                if path_expression[1] != '':
+                                    query_response = query_response[0][path_expression[0]
+                                                                    ][path_expression[1]]
+                                else:
+                                    query_response = query_response[0][path_expression[0]]
+                        if path_expression[1] != '':
+                            query_response = query_response[path_expression[1]]
+                    else:
+                        query_response = query_response[path_expression]
+                updated_query_response.append(query_response)
+            else:
+                updated_query_response.append(query_response)
         return updated_query_response
 
     def handle_return_clause(self, query_data):
@@ -350,7 +309,6 @@ class Main(object):
                 for qd in query_data:
                     temp = {}
                     for return_clause in return_clauses[1]:
-                        # print(return_clause)
                         data = None
                         for x in return_clause[1][1]:
                             if not data:
@@ -371,23 +329,26 @@ class Main(object):
                     temp[return_clause[0]] = data
                 result.append(temp)
         # returning a list
-        else:
+        elif type(return_clauses).__name__ == 'list':
             if type(query_data).__name__ == 'list':
                 for qd in query_data:
                     # temp = []
                     return_data = None
-                    for return_clause in return_clauses[1]:
-                        if type(return_clause).__name__ == 'list':
-                            if not return_data:
-                                return_data = qd[return_clause[0]
-                                                 ][return_clause[1]]
+                    if len(return_clauses) > 1:
+                        for return_clause in return_clauses[1]:
+                            if type(return_clause).__name__ == 'list':
+                                if not return_data:
+                                    return_data = qd[return_clause[0]
+                                                    ][return_clause[1]]
+                                else:
+                                    return_data = return_data[rc]
                             else:
-                                return_data = return_data[rc]
-                        else:
-                            if not return_data:
-                                return_data = qd[return_clause]
-                            else:
-                                return_data = return_data[return_clause]
+                                if not return_data:
+                                    return_data = qd[return_clause]
+                                else:
+                                    return_data = return_data[return_clause]
+                    else:
+                        return_data = qd
                     result.append(return_data)
             else:
                 return_data = None
@@ -405,6 +366,9 @@ class Main(object):
                             return_data = return_data[return_clause]
 
                 result.append(return_data)
+        # return variable
+        else:
+            result = query_data
         return result
 
     def handle_multiple_where_clauses(self, where_clauses, expressions, db):
@@ -424,7 +388,9 @@ class Main(object):
                 lhs_variable = lhs[0]
                 condition = exp[1]
                 rhs = exp[2]
+                # pprint.pprint(all_data)
                 rhs_variable = rhs[0] if type(rhs).__name__ == 'list' else rhs
+                # handle RHS of the expression
                 if type(rhs).__name__ == 'list':
                     for x in rhs[1]:
                         if type(x).__name__ == 'str' and rhs[-1][-1] != x:
@@ -436,20 +402,24 @@ class Main(object):
                                     tempr = [data[x] for data in result]
                             else:
                                 tempr = tempr[x]
+                
+                # handle LHS of the expression
                 for x in lhs[1]:
                     if type(x).__name__ == 'str' and lhs[-1][-1] != x:
                         if not templ:
                             if not result:
                                 templ = [data[x] for data in all_data[lhs_variable]]
-                            else:
+                            elif result[0].get(x):
                                 templ = [data[x] for data in result]
+                            else:
+                                templ = [data[x] for data in all_data[lhs_variable]]
                         else:
                             templ = templ[x]
 
                 if not templ:
                     templ = all_data[lhs_variable] if not result else result
                 if not tempr:
-                    tempr = all_data[rhs_variable] if not result else result
+                    tempr = all_data[rhs_variable if '$' in rhs_variable else lhs_variable] if not result else result
 
                 if type(rhs).__name__ == 'list':
                     rhs_key = rhs[-1][-1]
@@ -467,8 +437,12 @@ class Main(object):
                     if type(x).__name__ == 'str':
                         if not result:
                             for data in all_data[lhs[0]]:
-                                if rhs in data[x][0]:
-                                    temp.append(data)
+                                if type(data).__name__ == 'list':
+                                    if rhs in data[0][x]:
+                                        temp.append(data)
+                                else:
+                                    if rhs in data[x]:
+                                        temp.append(data)
                         else:
                             for data in result:
                                 if rhs in data[0][x]:
@@ -529,6 +503,8 @@ class Main(object):
 
         if len(where_clauses) == 1 and where_clauses[0][0] != 'contains' and type(where_clauses[0][1][2]).__name__ not in ('str', 'int'):
             _keys = list(mongoCollection.keys())
+            print(mongoCollection, _keys)
+
             if len(_keys) > 1:
                 q = {
                     '$lookup': {
@@ -561,10 +537,10 @@ class Main(object):
 ######################################### ENTRY POINT #########################################
 if __name__ == '__main__':
     print(f'''{cColors.OKBLUE}
-    -----------------------------------------------------------------------------------------------------------------------
-    Enter the input query in JSONiq starting from the next line. To mark the end of the input query, add ';' at the end.
-    To run the query, press enter.
-    -----------------------------------------------------------------------------------------------------------------------{cColors.ENDC}
+-----------------------------------------------------------------------------------------------------------------------
+Enter the input query in JSONiq starting from the next line. To mark the end of the input query, add ';' at the end.
+To run the query, press enter.
+-----------------------------------------------------------------------------------------------------------------------{cColors.ENDC}
     ''')
     mainObj = Main("Enter an input query")
     # mainObj.check_for_file()

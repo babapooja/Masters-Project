@@ -167,6 +167,11 @@ def p_expr_1(p):
 
 
 def p_expr_2(p):
+    'expr : VARIABLE IN JSONLINES LPAREN INVERTEDCOMMA FILENAME INVERTEDCOMMA RPAREN'
+    p[0] = ['expr', [p[1], p[6]]]
+
+
+def p_expr_3(p):
     'expr : rexpr'
     p[0] = p[1]
 
