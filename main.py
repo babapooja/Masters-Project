@@ -157,45 +157,78 @@ class Main(object):
                     if i.get(lhs_key):
                         if i[lhs_key] == rhs_key:
                             final_res.append(i)
-                # final_res = [i for i in lhs_data if i[lhs_key] == rhs_key]
             else:
                 for i in lhs_data:
                     for j in rhs_data:
                         if i.get(lhs_key) and j.get(rhs_key):
                             if i[lhs_key] == j[rhs_key]:
-                                final_res.append(self.cross_product([[i],[j]]))
-                # final_res = [self.cross_product(
-                #     [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] == j[rhs_key]]
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
         elif condition == '$gt':
             if not join:
-                final_res = [i for i in lhs_data[0] if i[lhs_key] > rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] > rhs_key:
+                            final_res.append(i)
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] > j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] > j[rhs_key]:
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
         elif condition == '$gte':
             if not join:
-                final_res = [i for i in lhs_data[0] if i[lhs_key] >= rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] >= rhs_key:
+                            final_res.append(i)
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] >= j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] >= j[rhs_key]:
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
         elif condition == '$lt':
             if not join:
-                final_res = [i for i in lhs_data[0] if i[lhs_key] < rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] <= rhs_key:
+                            final_res.append(i)
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] < j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] <= j[rhs_key]:
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
         elif condition == '$lte':
             if not join:
-                final_res = [i for i in lhs_data[0] if i[lhs_key] <= rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] <= rhs_key:
+                            final_res.append(i)
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] <= j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] <= j[rhs_key]:
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
         elif condition == '$ne':
             if not join:
-                final_res = [i for i in lhs_data[0] if i[lhs_key] != rhs_key]
+                for i in lhs_data:
+                    if i.get(lhs_key):
+                        if i[lhs_key] != rhs_key:
+                            final_res.append(i)
             else:
-                final_res = [self.cross_product(
-                    [[i], [j]]) for i in lhs_data for j in rhs_data if i[lhs_key] != j[rhs_key]]
+                for i in lhs_data:
+                    for j in rhs_data:
+                        if i.get(lhs_key) and j.get(rhs_key):
+                            if i[lhs_key] != j[rhs_key]:
+                                final_res.append(
+                                    self.cross_product([[i], [j]])[0])
 
         return final_res
     ######################################### HELPER FUNCTIONS #########################################
@@ -234,7 +267,8 @@ class Main(object):
             'variables_check': self.check_for_variables()
         }
         print(f'{cColors.UNDERLINE}\nChecking for semantic errors{cColors.ENDC}')
-        print(f'Variables validity: {validities["variables_check"]["message"]}')
+        print(
+            f'Variables validity: {validities["variables_check"]["message"]}')
 
         return (validities['variables_check']['is_valid'])
     ######################################### SEMANTIC ERRORS CHECK #########################################
@@ -248,7 +282,8 @@ class Main(object):
 
         # work on the WHERE calause if the where_clauses have been specified
         if len(self.where_clauses) >= 1:
-            updated_query_response = self.handle_multiple_where_clauses(self.where_clauses[1], self.for_clauses[1], db)
+            updated_query_response = self.handle_multiple_where_clauses(
+                self.where_clauses[1], self.for_clauses[1], db)
 
         # work on the FOR clause
         if not len(self.where_clauses):
@@ -262,7 +297,8 @@ class Main(object):
             for qr in updated_query_response:
                 return_data = self.handle_return_clause(qr)
                 for _ in return_data:
-                    result.append(_)
+                    if _ not in result:
+                        result.append(_)
         # else:
         #     return_data = self.generate_return_data(updated_query_response['value'], updated_query_response['var'])
         #     for _ in return_data:
@@ -280,7 +316,8 @@ class Main(object):
             collection_name = expression[1][1].split('.')[0]
             collection = db[collection_name]
             query_response = list(collection.find({}))
-            path_expressions = expression[1][2] if len(expression[1]) == 3 else []
+            path_expressions = expression[1][2] if len(
+                expression[1]) == 3 else []
             if len(path_expressions):
                 for path_expression in path_expressions:
                     if type(path_expression).__name__ == 'list':
@@ -288,7 +325,7 @@ class Main(object):
                             if type(query_response[0][path_expression[0]]).__name__ == 'list':
                                 if path_expression[1] != '':
                                     query_response = query_response[0][path_expression[0]
-                                                                    ][path_expression[1]]
+                                                                       ][path_expression[1]]
                                 else:
                                     query_response = query_response[0][path_expression[0]]
                         if path_expression[1] != '':
@@ -339,7 +376,7 @@ class Main(object):
                             if type(return_clause).__name__ == 'list':
                                 if not return_data:
                                     return_data = qd[return_clause[0]
-                                                    ][return_clause[1]]
+                                                     ][return_clause[1]]
                                 else:
                                     return_data = return_data[rc]
                             else:
@@ -364,7 +401,6 @@ class Main(object):
                             return_data = query_data[return_clause]
                         else:
                             return_data = return_data[return_clause]
-
                 result.append(return_data)
         # return variable
         else:
@@ -373,7 +409,8 @@ class Main(object):
 
     def handle_multiple_where_clauses(self, where_clauses, expressions, db):
         all_data = {}
-        result = []
+        result = {}
+        last = ''
         for expression in expressions:
             collection_name = expression[1][1].split('.')[0]
             temp = list(db[collection_name].find({}))
@@ -385,49 +422,60 @@ class Main(object):
                 tempr, templ = {}, {}
                 exp = where_expression[1]
                 lhs = exp[0]
-                lhs_variable = lhs[0]
+                last = lhs_variable = lhs[0]
+
                 condition = exp[1]
                 rhs = exp[2]
-                # pprint.pprint(all_data)
                 rhs_variable = rhs[0] if type(rhs).__name__ == 'list' else rhs
                 # handle RHS of the expression
                 if type(rhs).__name__ == 'list':
                     for x in rhs[1]:
                         if type(x).__name__ == 'str' and rhs[-1][-1] != x:
                             if not tempr:
-                                if not result:
+                                if not result.get(rhs_variable):
                                     tempr = [data[x]
-                                             for data in all_data[rhs[0]]]
-                                else:
-                                    tempr = [data[x] for data in result]
+                                             for data in all_data[rhs_variable]]
+                                elif result.get(rhs_variable):
+                                    for data in result[rhs_variable]:
+                                        tempr.append(data[x])
                             else:
                                 tempr = tempr[x]
-                
+
                 # handle LHS of the expression
                 for x in lhs[1]:
                     if type(x).__name__ == 'str' and lhs[-1][-1] != x:
                         if not templ:
-                            if not result:
-                                templ = [data[x] for data in all_data[lhs_variable]]
-                            elif result[0].get(x):
-                                templ = [data[x] for data in result]
-                            else:
-                                templ = [data[x] for data in all_data[lhs_variable]]
+                            if not result.get(lhs_variable):
+                                templ = [data[x]
+                                         for data in all_data[lhs_variable]]
+                            elif result.get(lhs_variable):
+                                for data in result[lhs_variable]:
+                                    templ.append(data[x])
                         else:
                             templ = templ[x]
-
                 if not templ:
-                    templ = all_data[lhs_variable] if not result else result
+                    templ = all_data[lhs_variable] if not result or not result.get(
+                        lhs_variable) else result[lhs_variable]
+                    if not result or not result.get(lhs_variable):
+                        templ = all_data[lhs_variable]
+                    else:
+                        templ = result[lhs_variable]
                 if not tempr:
-                    tempr = all_data[rhs_variable if '$' in rhs_variable else lhs_variable] if not result else result
-
+                    if not result or not result.get(rhs_variable):
+                        if '$' in rhs_variable:
+                            tempr = all_data[rhs_variable]
+                        else:
+                            tempr = all_data[lhs_variable]
+                    else:
+                        tempr = result[rhs_variable]
                 if type(rhs).__name__ == 'list':
                     rhs_key = rhs[-1][-1]
                     join = True
                 else:
                     rhs_key = rhs
                     join = False
-                result = self.check_condition(
+
+                result[lhs_variable] = self.check_condition(
                     templ, lhs[-1][-1], condition, tempr, rhs_key, join)
 
             elif where_expression[0] == 'contains':
@@ -448,7 +496,7 @@ class Main(object):
                                 if rhs in data[0][x]:
                                     temp.append(data)
                 result = temp
-        return result
+        return result[last] if last else result
 
     def handle_where_clause(self, db):
         where_clauses = self.where_clauses[1]
