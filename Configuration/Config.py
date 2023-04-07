@@ -6,7 +6,7 @@ class Config:
 
 
     def read_config(self):
-        self.config_parser.read('.jsoniq.cfg')
+        self.config_parser.read('Configuration\.jsoniq.cfg')
         config = dict(self.config_parser.items('CONNECTION_DETAILS'))
         return config
 

@@ -1,55 +1,5 @@
-'''
-
-link: https://polybox.ethz.ch/index.php/s/Qr2eo7nolAxP95d (slide 163-165) - chapter 13
-
-Grammar:
-
-    query: forclauses returnclause
-
-    query: forclauses whereclause returnclause
-
-    forclauses: forclause | forclauses forclause
-
-    forclause: FOR exprs
-
-    whereclause: WHERE  wexprs
-
-    wexprs: wexpr | wexprs AND wexpr
-
-    wexpr: VARIABLE DOT pathexpr condition VARIABLE DOT pathexpr
-            | VARIABLE condition VARIABLE DOT pathexpr
-            | VARIABLE condition VARIABLE
-            | VARIABLE DOT pathexpr condition STRING 
-            | VARIABLE condition STRING 
-            | VARIABLE DOT pathexpr condition NUMBER
-            | VARIABLE condition NUMBER
-            | CONTAINS LPAREN VARIABLE DOT pathexpr COMMA STRING RPAREN
-            | CONTAINS LPAREN VARIABLE COMMA STRING RPAREN
-
-    condition: EQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSEQUAL | LESSTHAN 
-
-    exprs: exprs COMMA expr | expr
-
-    expr: VARIABLE IN JSONLINES LPARENT INVERTEDCOMMA FILENAME INVERTEDCOMMA RPAREN DOT pathexpr | rexpr
-
-    pathexpr: pathexpr DOT step | step
-
-    step: NAME LBRACKET selector RBRACKET | NAME
-
-    selector:  | NUMBER
-
-    returnclause: RETURN rexpr
-
-    rexpr: VARIABLE DOT pathexpr | VARIABLE | LCBRACKET jsoncontents RCBRACKET
-
-    jsoncontents : jsoncontents COMMA jsoncontent | jsoncontent
-
-    jsoncontent : STRING COLON rexpr
-
-'''
-
 import ply.yacc as yacc
-from MProjectLexer import tokens
+from LexYacc.MProjectLexer import tokens
 
 # start of the query
 def p_query_1(p):
@@ -250,22 +200,3 @@ def p_error(p):
 
 parser = yacc.yacc()
 
-
-inputdata = '''
-FOR $x in json-lines('collection-answers.json').answers[]
-            return
-                {
-                    "answer_id" : $x.answer_id,
-                    "q_id" : $x.question_id
-                }
- 
-'''
-
-# while True:
-#     try:
-#         # Use raw_input on Python 2
-#         res = parser.parse(inputdata)
-#         print('RES: ', res)
-#         break
-#     except EOFError:
-#         break

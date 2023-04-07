@@ -1,5 +1,3 @@
-
-
 import ply.lex as lex
 reserved = {
     'for': 'FOR',
@@ -149,23 +147,3 @@ def t_error(t):
 
 # Build the lexer
 lexer = lex.lex()
-
-inputdata = '''
-for $question in json-lines('collection-faq.json').faqs[],
-                $answer in json-lines('collection-answers.json').answers[]
-            where $question.question_id eq $answer.question_id and 
-                $answer.answer_id eq $answer.answer_id
-                $answer.answer_id eq $answer.answer_id
-            return
-            {
-                "question":$question.title,
-                "answer_score":$answer.score
-            };
-
-'''
-# lexer.input(inputdata)
-# while True:
-#     tok = lexer.token()
-#     if not tok:
-#         break
-#     print(tok)
