@@ -5,8 +5,7 @@ from itertools import product
 from Configuration.Config import config_data
 from Constants.ConsoleColors import cColors
 
-
-class J2MConvertor(object):
+class J2MConverter(object):
     for_clauses = []
     return_clause = ''
     where_clauses = []
@@ -15,12 +14,9 @@ class J2MConvertor(object):
     def __init__(self, prompt) -> None:
         self.input_query = self.read_input(prompt)
         self.config = config_data
-        # try:
         parsed_query = parser.parse(self.input_query)
         # segregate the for clauses, where clauses, and the return clause
         self.segregate_clauses(parsed_query)
-        # except:
-        #     print('There is syntax error. Please resolve it and try again.\n')
 
     ######################################### HELPER FUNCTIONS #########################################
     # segregate clauses
@@ -341,9 +337,18 @@ class J2MConvertor(object):
         last = ''
         for expression in expressions:
             collection_name = expression[1][1].split('.')[0]
-            temp = list(db[collection_name].find({}))
-            all_data[expression[1][0]] = temp
+            project = {'_id': 0}
+            projected_key = ''
+            if len(expression[1]) > 2:
+                if len(expression[1][2]) > 1:
+                    projected_key = expression[1][2]
+                    if type(projected_key[-1]).__name__ == 'str':
+                        project[projected_key[-1]] = 1
+                    else:
+                        project[projected_key[-1][0]] = 1
 
+            temp = list(db[collection_name].find({}, project))
+            all_data[expression[1][0]] = temp
         # for data in all_data:
         for where_expression in where_clauses:
             if where_expression[0] == 'wexpr':
@@ -380,7 +385,7 @@ class J2MConvertor(object):
                                 for data in result[lhs_variable]:
                                     templ.append(data[x])
                         else:
-                            templ = templ[x]
+                            templ = templ[x]                        
                 if not templ:
                     templ = all_data[lhs_variable] if not result or not result.get(
                         lhs_variable) else result[lhs_variable]
@@ -427,5 +432,3 @@ class J2MConvertor(object):
                                     temp.append(data)
                 result[lhs[0]] = temp
         return result[last] if last else result
-
-

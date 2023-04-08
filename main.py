@@ -1,5 +1,5 @@
 from Constants.ConsoleColors import cColors
-from Convertor.J2MConvertor import J2MConvertor
+from Converter.J2MConverter import J2MConverter
 import pprint
 if __name__ == '__main__':
     print(f'''{cColors.OKBLUE}
@@ -8,7 +8,7 @@ Enter the input query in JSONiq starting from the next line. To mark the end of 
 To run the query, press enter.
 -----------------------------------------------------------------------------------------------------------------------{cColors.ENDC}
     ''')
-    mainObj = J2MConvertor("Enter an input query")
+    mainObj = J2MConverter("Enter an input query")
     try:
         if mainObj.check_semantic_errors():
             print(f'{cColors.UNDERLINE}\nResults for above query{cColors.ENDC}')

@@ -67,7 +67,18 @@ QUERY:
             "employee_name": $employee.ENAME
             };
     '
-3. Get the names of the customers whose address has 'St.' 
+3. For each customer, find a list of Order Numbers they have placed.
+    '
+        for $customer in json-lines('customers.json'),
+            $order in json-lines('orders.json').orders[]
+        where $customer.CNO eq $order.CUSTOMER        
+        return {
+            "customer_name": $customer.CNAME,
+            "customer_number": $customer.CNO,
+            "order_number": $order.ONO
+        };
+    '
+4. Get the names of the customers whose address has 'St.' 
     '
         for $customer in json-lines('customers.json').customers[]
         where contains($customer.STREET, "St.")
@@ -76,7 +87,7 @@ QUERY:
             "address": $customer.STREET
         };
     '
-4. Get the names of customers who have ordered parts only from employees living in 'Wichita'.
+5. Get the names of customers who have ordered parts only from employees living in 'Wichita'.
     '
         for $customer in json-lines('customers.json').customers[],
 	        $employee in json-lines('employees.json'),
