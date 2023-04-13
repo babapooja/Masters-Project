@@ -3,8 +3,8 @@
 This is my Master's project. The details of my advisor for this project are - 
 
 Dr. Raj Sunderraman
-    _Professor and Associate Chair
-    Department of Computer Science
+    _Professor and Associate Chair \n
+    Department of Computer Science \n
     Georgia State University
     P.O. Box 5060
     Atlanta, GA 30302-5060
