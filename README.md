@@ -1,5 +1,14 @@
 # J2M Converter
 
+This is my Master's project. The details of my advisor for this project are - 
+Dr. Raj Sunderraman
+_Professor and Associate Chair
+Department of Computer Science
+Georgia State University
+P.O. Box 5060
+Atlanta, GA 30302-5060
+Website: http://tinman.cs.gsu.edu/~raj_
+
 This open source project provides an implmentation of parsing JSONiq query entered by user, generating MongoDB query return the result after querying the MongoDB.
 
 ## Context-Free Grammer
