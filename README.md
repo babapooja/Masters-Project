@@ -2,13 +2,13 @@
 
 This is my Master's project. The details of my advisor for this project are - 
 
-Dr. Raj Sunderraman
-    _Professor and Associate Chair \n
-    Department of Computer Science \n
+    Dr. Raj Sunderraman
+    Professor and Associate Chair
+    Department of Computer Science
     Georgia State University
     P.O. Box 5060
     Atlanta, GA 30302-5060
-    Website: http://tinman.cs.gsu.edu/~raj_
+    Website: http://tinman.cs.gsu.edu/~raj
 
 This open source project provides an implmentation of parsing JSONiq query entered by user, generating MongoDB query return the result after querying the MongoDB.
 
@@ -165,7 +165,8 @@ Later all the statements are stiched together based on the JSONiq query and the 
 Once the results are fetched, we run through the `return clause` from the JSONiq query to understand what exact details are asked. THe output data is then formed conforming to the JSONiq query and returned to the command prompt, the interpreter. 
 
 If there is any error while executing the query, there will be an error message displayed in the console in red color. If the data is fetched successfully and the result data is formed, a success message is displayed on the interpreter in green color and the results are displayed on the console.
-_
-Note: MongoDB does not give an error if a database or collection is not found. Infact it creates one instance as blank and works on it. 
+
+
+_Note: MongoDB does not give an error if a database or collection is not found. Infact it creates one instance as blank and works on it. 
 If such an anamoly happens in the execution of this project and no data is found to operate on, an error message will be displayed on the console to recheck the query._
 
