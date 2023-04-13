@@ -4,7 +4,7 @@ This open source project provides an implmentation of parsing JSONiq query enter
 
 ## Context-Free Grammer
 
-`
+```
 query ::= forclauses whereclause returnclause | forclauses returnclause
 forclauses ::= forclause | forclauses forclause
 forclause ::= FOR exprs
@@ -31,5 +31,4 @@ returnclause ::= RETURN rexpr
 rexpr ::= VARIABLE DOT pathexpr | VARIABLE | LCBRACKET jsoncontents RCBRACKET
 jsoncontents ::= jsoncontents COMMA jsoncontent | jsoncontent
 jsoncontent ::= STRING COLON rexpr
-
-`
+```
