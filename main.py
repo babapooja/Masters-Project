@@ -25,6 +25,12 @@ To discontinue querying enter - n, N, NO, no, No
             else:
                 print(
                     f'{cColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{cColors.ENDC}')
+                continue_or_not = input(
+                    f'{cColors.OKCYAN}Do you want to continue querying? {cColors.ENDC}')
+                print()
         except:
             print(
                 f'{cColors.FAIL}\n\nError(s) found in the input query. Please check your query for the above errors.\n\n{cColors.ENDC}')
+            continue_or_not = input(
+                    f'{cColors.OKCYAN}Do you want to continue querying? {cColors.ENDC}')
+            print()

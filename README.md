@@ -1,4 +1,4 @@
-# J2M Converter
+# J2M: A JSONiq to MongoDB Converter
 
 This is my Master's project. The details of my advisor for this project are - 
 
@@ -50,7 +50,7 @@ jsoncontent ::= STRING COLON rexpr
 ## MongoDB, Python
 This project requires Python installed on your system. MongoDB can or cannot be installed on your system. MongoDB contains all the databases and collections requried. The configuration for MongoDB connection can be done in the `.jsoniq.cfg`. The configuration includes - `DATABASE_NAME`, `HOSTNAME`, `PORT`, `USERNAME`, `PASSWORD`
 
-## How to invokse interpreter
+## How to invoke interpreter
 Once the project is on the system and the database connection is configured, you can open the terminal in the project directory and execute the following command to run the python code - 
 <p align="center">python main.py</p>
 The program will start executing and provide area to type your JSONiq query. End your JSONiq query with a `;` to mark the end of the JSONiq query. After executing the JSONiq query, you will be prompted to continue with querying or exit the code. To exit the interpreter, you can either type, 'n', 'N', 'No', 'no' or 'NO'.
