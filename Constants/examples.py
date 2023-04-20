@@ -64,7 +64,8 @@ QUERY:
         where $customer.CITY eq $employee.CITY
         return {
             "customer_name": $customer.CNAME,
-            "employee_name": $employee.ENAME
+            "employee_name": $employee.ENAME,
+            "city_name": $customer.CITY
             };
     '
 3. For each customer, find a list of Order Numbers they have placed.
